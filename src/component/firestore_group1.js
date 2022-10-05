@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getFirestore } from "firebase/firestore";
+import { getDocs, getFirestore } from "firebase/firestore";
 import {
   collection,
   getDoc,
@@ -8,9 +8,13 @@ import {
   doc,
   onSnapshot,
   updateDoc,
+  query,
+  where,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 import { useEffect, useRef, useState } from "react";
-import styled, {createGlobalStyle} from "styled-components";
+import styled, { createGlobalStyle } from "styled-components";
 const authorId = "valerieKC";
 
 const firebaseConfig = {
@@ -72,7 +76,7 @@ const TitleInput = styled.input.attrs({
 `;
 
 const SearchGroup = styled.div`
-  height:100%;
+  height: 100%;
   margin: 20px;
   display: block;
   width: 200px;
@@ -117,8 +121,6 @@ const ShowSearchResult = styled.div`
   text-align: center;
 `;
 
-
-
 const AddFriendBtn = styled.button.attrs({
   value: "submit",
 })`
@@ -126,14 +128,19 @@ const AddFriendBtn = styled.button.attrs({
   height: 20px;
   display: ${({ props }) => (props ? "flex" : "none")};
   justify-content: center;
-  align-items:center;
+  align-items: center;
+`;
+const UserMessagePanel = styled.div`
+  width: 100%;
+  display: block;
+  padding-top: 5px;
 `;
 
 const UserMessage = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  position:fixed;
+  padding-top: 5px;
 `;
 
 const AcceptBtn = styled.button.attrs({ value: "submit" })`
@@ -192,11 +199,20 @@ const FriendListPanel = styled.div`
 `;
 
 const FriendListTitle = styled.div`
-font-size: 16px;
-font-weight: bold;
-text-align:center;
+  font-size: 16px;
+  font-weight: bold;
+  text-align: center;
+`;
 
-`
+const FriendsList = styled.div``;
+const FriendEachList = styled.div`
+  display: flex;
+  text-align: center;
+  flex-direction: column;
+  padding-top: 5px;
+  border: 2px solid #f7f0f0;
+  border-radius: 8px;
+`;
 
 function MyFireStoreApp() {
   const inputTitleRef = useRef();
@@ -207,11 +223,17 @@ function MyFireStoreApp() {
   const [searchUser, setSearchUser] = useState("");
   const [addFriendState, setAddFriendState] = useState([]);
   const [responseState, setResponseState] = useState([]);
+  const [friendState, setFriendList] = useState([]);
   const MyAccount = {
     email: "valerie81.wang@gmail.com",
     id: "valerie",
     name: "KCWang",
   };
+  const tag = [
+    {0: "Beauty"},
+    {1: "Gossipping"},
+    {2: "SchoolLife"}
+];
 
   async function PostData() {
     try {
@@ -229,59 +251,94 @@ function MyFireStoreApp() {
     }
   }
 
-  //監聽資訊即時更新，編輯其他功能中先comment掉
-  // useEffect(() => {
-  //   const snapshot = onSnapshot(collection(db, "Articles"), (snapshot) => {
-  //     let posts = [];
-  //     snapshot.docs.forEach((doc) => {
-  //       posts.push({ ...doc.data(), id: doc.id });
-  //     });
-  //     posts.forEach((doc) => {
-  //       console.log({
-  //         id: doc.id,
-  //         title: doc.title,
-  //         content: doc.content,
-  //         tag: doc.tag,
-  //         author_id: doc.author_id,
-  //         created_time: new Date(doc.created_time.seconds * 1000),
-  //       });
-  //     });
-  //   });
-  //   //cleanup
-  //   return () => {
-  //     snapshot();
-  //   };
-  // }, []);
+  //監聽文章即時更新，編輯其他功能中先comment掉
+  useEffect(() => {
+    const snapshot = onSnapshot(collection(db, "Articles"), (snapshot) => {
+      let posts = [];
+      snapshot.docs.forEach((doc) => {
+        posts.push({ ...doc.data(), id: doc.id });
+      });
+      posts.forEach((doc) => {
+        console.log({
+          id: doc.id,
+          title: doc.title,
+          content: doc.content,
+          tag: doc.tag,
+          author_id: doc.author_id,
+          created_time: new Date(doc.created_time.seconds * 1000),
+        });
+      });
+    });
+    //cleanup
+    return () => {
+      snapshot();
+    };
+  }, []);
 
   async function SearchFriends() {
     if (!inputSearchRef.current.value.trim()) {
-      setSearchUser("");
       return;
     }
     try {
       const getFriend = await getDoc(
         doc(db, "Users", inputSearchRef.current.value.trim())
       );
+      // console.log(getFriend.data());
       setSearchUser(getFriend?.data() ? getFriend.data().name : "查無此用戶");
+
+//       const result = tag.find((e) => {
+//         console.log(e)
+//         if(e.value === inputSearchRef.current.value.trim()){
+// console.log(e.key)
+//         }
+//       });
+
+      // const tagList = collection(db, "Articles");
+      // const q = query(
+      //   tagList,
+      //   where("tag", "==", Number(inputSearchRef.current.value.trim()))
+      // );
+      // const querySnapshot = await getDocs(q);
+      // querySnapshot.forEach((doc) => {
+      //   console.log(doc.data());
+      // });
     } catch (e) {
       console.error("Search Friend Failed: ", e);
     }
   }
 
+  // async function SearchTag() {
+  //   const tagList = collection(db, "Articles");
+  //   const q = query(
+  //     tagList,
+  //     where("tag", "==", inputSearchRef.current.value.trim())
+  //   );
+  //   const querySnapshot = await getDocs(q);
+  //   querySnapshot.forEach((doc) => {
+  //     console.log(doc);
+  //   });
+  // }
+
+  //////// FireStore的Search功能
+  // const userList = collection(db, "Users");
+  //     const q = query(userList, where("email", "==", inputSearchRef.current.value.trim()));
+  //     const querySnapshot = await getDocs(q);
+
+  //       querySnapshot.forEach((doc) => {
+  //         setSearchUser(doc.data().name)
+  //       })
+
   async function SendFriendRequest() {
     try {
-      if(!inputSearchRef.current.value) return
-      const getRequest = await getDoc(
-        doc(db, "Invitation", inputSearchRef.current.value)
-      );  
-      const requestedData = getRequest.data().request;
-      if (requestedData){
-        await updateDoc(doc(db, "Invitation", inputSearchRef.current.value), {
-          request: [...requestedData, MyAccount],
-        })}else{
-          await updateDoc(doc(db, "Invitation", inputSearchRef.current.value), {
-          request: [...requestedData, MyAccount],
-        })}
+      if (!inputSearchRef.current.value) return;
+      // const getRequest = await getDoc(
+      //   doc(db, "Invitation", inputSearchRef.current.value)
+      // );
+      // const requestedData = getRequest.data().request;
+
+      await updateDoc(doc(db, "Invitation", inputSearchRef.current.value), {
+        request: arrayUnion(MyAccount),
+      });
     } catch (e) {
       console.error("Error SendFriendRequest(): ", e);
     }
@@ -308,38 +365,15 @@ function MyFireStoreApp() {
 
   async function AcceptFriend(user, index) {
     try {
-      const getRequest = await getDoc(
-        doc(db, "Invitation", "valerie81.wang@gmail.com")
-      );
-      const requestId = getRequest.data().request;
-      const sendResponse = await getDoc(
-        doc(db, "Invitation", requestId[index].email)
-      );
-      const responseId = sendResponse.data().response;
-
-      const copiedRequestId = [...requestId];
-      copiedRequestId.splice(index, 1);
       await updateDoc(doc(db, "Invitation", "valerie81.wang@gmail.com"), {
-        request: copiedRequestId,
+        request: arrayRemove(user),
       });
       await updateDoc(doc(db, "Invitation", user.email), {
-        response: [...responseId, MyAccount],
+        response: arrayUnion(MyAccount),
       });
-
-      const getFriends = await getDoc(
-        doc(db, "Users", "valerie81.wang@gmail.com")
-      );
-      const oldFriends = getFriends.data().friends;
-
-      if (oldFriends) {
-        await updateDoc(doc(db, "Users", "valerie81.wang@gmail.com"), {
-          friends: [...oldFriends, user],
-        });
-      } else {
-        await updateDoc(doc(db, "Users", "valerie81.wang@gmail.com"), {
-          friends: [user],
-        });
-      }
+      await updateDoc(doc(db, "Users", "valerie81.wang@gmail.com"), {
+        friends: arrayUnion(user),
+      });
     } catch (e) {
       console.error("Error AcceptFriend(): ", e);
     }
@@ -348,24 +382,17 @@ function MyFireStoreApp() {
   async function AcceptResponse() {
     try {
       const getfriends = await getDoc(
-        doc(db, "Users", "valerie81.wang@gmail.com")
+        doc(db, "Invitation", "valerie81.wang@gmail.com")
       );
-      const responseId = getfriends.data().friends;
-      console.log(responseId);
-      console.log(responseState);
-
-      if (responseId) {
-        await updateDoc(doc(db, "Users", "valerie81.wang@gmail.com"), {
-          friends: [...responseId, ...responseState],
-        });
-      } else {
-        await updateDoc(doc(db, "Users", "valerie81.wang@gmail.com"), {
-          friends: [...responseState],
-        });
-      }
+      const responseId = getfriends.data().response;
+      const newResponseId = [...responseId];
 
       await updateDoc(doc(db, "Invitation", "valerie81.wang@gmail.com"), {
-        response: [],
+        response: arrayRemove(...newResponseId),
+      });
+
+      await updateDoc(doc(db, "Users", "valerie81.wang@gmail.com"), {
+        friends: arrayUnion(...newResponseId),
       });
     } catch (e) {
       console.error("Error AcceptResponse(): ", e);
@@ -373,11 +400,23 @@ function MyFireStoreApp() {
   }
 
   useEffect(() => {
-    if (responseState.length === 0) return;
+    if (responseState.length === 0 || friendState.length === 0) return;
     AcceptResponse();
   }, [responseState]);
 
-  // console.log(props)
+  useEffect(() => {
+    const snapshot = onSnapshot(
+      doc(db, "Users", "valerie81.wang@gmail.com"),
+      (snapshot) => {
+        const friendList = snapshot.data().friends;
+        setFriendList(friendList || []);
+      }
+    );
+    //cleanup
+    return () => {
+      snapshot();
+    };
+  }, []);
 
   return (
     <>
@@ -386,7 +425,7 @@ function MyFireStoreApp() {
         <SearchGroup>
           <SearchInputPanel>
             <SearchInput ref={inputSearchRef} onChange={() => {}} />
-            <SearchBtn onClick={SearchFriends}>搜尋好友</SearchBtn>
+            <SearchBtn onClick={SearchFriends}>搜尋</SearchBtn>
           </SearchInputPanel>
           <ShowSearchPanel>
             <ShowSearchTitle>搜尋用戶結果:</ShowSearchTitle>
@@ -398,20 +437,22 @@ function MyFireStoreApp() {
               加好友
             </AddFriendBtn>
           </ShowSearchPanel>
-          {addFriendState.map((user, index) => {
-            return (
-              <UserMessage key={user.id}>
-                {`${user.name} send you a request!`}
-                <AcceptBtn
-                  onClick={() => {
-                    AcceptFriend(user, index);
-                  }}
-                >
-                  Accept
-                </AcceptBtn>
-              </UserMessage>
-            );
-          })}
+          <UserMessagePanel>
+            {addFriendState.map((user, index) => {
+              return (
+                <UserMessage key={user.id}>
+                  {`${user.name} send you a request!`}
+                  <AcceptBtn
+                    onClick={() => {
+                      AcceptFriend(user, index);
+                    }}
+                  >
+                    Accept
+                  </AcceptBtn>
+                </UserMessage>
+              );
+            })}
+          </UserMessagePanel>
         </SearchGroup>
         <Wrapper>
           <InputGroup>
@@ -456,6 +497,15 @@ function MyFireStoreApp() {
         </Wrapper>
         <FriendListPanel>
           <FriendListTitle>好友列表</FriendListTitle>
+          <FriendsList>
+            {friendState.map((friend, index) => {
+              return (
+                <FriendEachList key={`${index}-${friend.name}`}>
+                  {friend.name}
+                </FriendEachList>
+              );
+            })}
+          </FriendsList>
         </FriendListPanel>
       </Container>
     </>
