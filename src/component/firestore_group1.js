@@ -229,11 +229,7 @@ function MyFireStoreApp() {
     id: "valerie",
     name: "KCWang",
   };
-  const tag = [
-    {0: "Beauty"},
-    {1: "Gossipping"},
-    {2: "SchoolLife"}
-];
+  const tag = [{ 0: "Beauty" }, { 1: "Gossipping" }, { 2: "SchoolLife" }];
 
   async function PostData() {
     try {
@@ -286,12 +282,12 @@ function MyFireStoreApp() {
       // console.log(getFriend.data());
       setSearchUser(getFriend?.data() ? getFriend.data().name : "查無此用戶");
 
-//       const result = tag.find((e) => {
-//         console.log(e)
-//         if(e.value === inputSearchRef.current.value.trim()){
-// console.log(e.key)
-//         }
-//       });
+      //       const result = tag.find((e) => {
+      //         console.log(e)
+      //         if(e.value === inputSearchRef.current.value.trim()){
+      // console.log(e.key)
+      //         }
+      //       });
 
       // const tagList = collection(db, "Articles");
       // const q = query(
@@ -400,7 +396,7 @@ function MyFireStoreApp() {
   }
 
   useEffect(() => {
-    if (responseState.length === 0 || friendState.length === 0) return;
+    if (responseState.length === 0 ) return;
     AcceptResponse();
   }, [responseState]);
 
