@@ -46,12 +46,18 @@ const Container = styled.div`
   height: 100%;
   margin: 0 auto;
   display: flex;
+  justify-content: space-between;
 `;
 const Header = styled.div`
   width: 100vw;
   height: 100px;
   background-color: #134e6f;
 `;
+
+const Main = styled.div`
+display:flex;
+flex-direction:column;
+`
 
 const Wrapper = styled.div`
   margin: 0 auto;
@@ -190,6 +196,20 @@ const FormLabel = styled.label`
   display: block;
 `;
 
+const ArticleWrapper = styled.div`
+  margin: 0 auto;
+  margin-top: 100px;
+  padding: 40px;
+  width: 500px;
+  background-color: #ffa822;
+  border: 4px solid #2c698d;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: center;
+`;
+
 const FriendListPanel = styled.div`
   height: 100%;
   margin: 20px;
@@ -224,6 +244,7 @@ function MyFireStoreApp() {
   const [addFriendState, setAddFriendState] = useState([]);
   const [responseState, setResponseState] = useState([]);
   const [friendState, setFriendList] = useState([]);
+  const [searchResultState,setSearchResultState] = useState([])
   const MyAccount = {
     email: "valerie81.wang@gmail.com",
     id: "valerie",
@@ -252,29 +273,30 @@ function MyFireStoreApp() {
   }
 
   //監聽文章即時更新，編輯其他功能中先comment掉
-  useEffect(() => {
-    const snapshot = onSnapshot(collection(db, "Articles"), (snapshot) => {
-      let posts = [];
-      snapshot.docs.forEach((doc) => {
-        posts.push({ ...doc.data(), id: doc.id });
-      });
-      posts.forEach((doc) => {
-        console.log({
-          id: doc.id,
-          title: doc.title,
-          content: doc.content,
-          tag: doc.tag,
-          author_id: doc.author_id,
-          created_time: new Date(doc.created_time.seconds * 1000),
-        });
-      });
-    });
-    //cleanup
-    return () => {
-      snapshot();
-    };
-  }, []);
+  // useEffect(() => {
+  //   const snapshot = onSnapshot(collection(db, "Articles"), (snapshot) => {
+  //     let posts = [];
+  //     snapshot.docs.forEach((doc) => {
+  //       posts.push({ ...doc.data(), id: doc.id });
+  //     });
+  //     posts.forEach((doc) => {
+  //       console.log({
+  //         id: doc.id,
+  //         title: doc.title,
+  //         content: doc.content,
+  //         tag: doc.tag,
+  //         author_id: doc.author_id,
+  //         created_time: new Date(doc.created_time.seconds * 1000),
+  //       });
+  //     });
+  //   });
+  //   //cleanup
+  //   return () => {
+  //     snapshot();
+  //   };
+  // }, []);
 
+  //想要加上搜尋tag功能，但改到搜尋文字轉換成數字而已
   async function SearchFriends() {
     if (!inputSearchRef.current.value.trim()) {
       return;
@@ -283,52 +305,33 @@ function MyFireStoreApp() {
       const getFriend = await getDoc(
         doc(db, "Users", inputSearchRef.current.value.trim())
       );
-      // console.log(getFriend.data());
-      // setSearchUser(getFriend?.data() ? getFriend.data().name : "查無此用戶");
 
-      const result = tag.find((e,index) => {
-        // console.log(typeof String(Object.values(e)));
-        if (inputSearchRef.current.value.trim() === String(Object.values(e))) {
-          return index
-        }
+      setSearchUser(getFriend?.data() ? getFriend.data().name : "");
+
+      const tagIndex = tag.findIndex((e,index) => {
+          return (
+            inputSearchRef.current.value.trim() === String(Object.values(e))
+          ); 
       });
 
-      console.log(result[0])
+      const tagList = collection(db, "Articles");
+      const q = query(
+        tagList,
+        where("tag", "==", tagIndex)
+      );
+      let posts=[]
+      const querySnapshot = await getDocs(q);
+      querySnapshot.forEach((doc) => {
+        posts.push(doc.data())
+      });
 
-      // const tagList = collection(db, "Articles");
-      // const q = query(
-      //   tagList,
-      //   where("tag", "==", Number(inputSearchRef.current.value.trim()))
-      // );
-      // const querySnapshot = await getDocs(q);
-      // querySnapshot.forEach((doc) => {
-      //   console.log(doc.data());
-      // });
+      console.log(posts)
     } catch (e) {
       console.error("Search Friend Failed: ", e);
     }
   }
 
-  // async function SearchTag() {
-  //   const tagList = collection(db, "Articles");
-  //   const q = query(
-  //     tagList,
-  //     where("tag", "==", inputSearchRef.current.value.trim())
-  //   );
-  //   const querySnapshot = await getDocs(q);
-  //   querySnapshot.forEach((doc) => {
-  //     console.log(doc);
-  //   });
-  // }
-
-  //////// FireStore的Search功能
-  // const userList = collection(db, "Users");
-  //     const q = query(userList, where("email", "==", inputSearchRef.current.value.trim()));
-  //     const querySnapshot = await getDocs(q);
-
-  //       querySnapshot.forEach((doc) => {
-  //         setSearchUser(doc.data().name)
-  //       })
+ 
 
   async function SendFriendRequest() {
     try {
@@ -353,7 +356,7 @@ function MyFireStoreApp() {
       (snapshot) => {
         const invitationData = snapshot.data();
         invitationData?.request.map((doc) => {
-          console.log(doc.name, "add you friend!");
+          // console.log(doc.name, "add you friend!");
         });
         setAddFriendState(invitationData.request || []);
         setResponseState(invitationData.response || []);
@@ -456,47 +459,50 @@ function MyFireStoreApp() {
             })}
           </UserMessagePanel>
         </SearchGroup>
-        <Wrapper>
-          <InputGroup>
-            <FormLabel>Title:</FormLabel>
-            <TitleInput ref={inputTitleRef} onChange={() => {}} />
-          </InputGroup>
-          <InputGroup>
-            <FormLabel>Tag:</FormLabel>
-            <TagInput
-              ref={inputTagRef}
-              onClick={(event) => {
-                inputTagRef.current = event.target;
-              }}
-              value={0}
-            />
-            <Label>Beauty</Label>
-            <TagInput
-              ref={inputTagRef}
-              onClick={(event) => {
-                inputTagRef.current = event.target;
-              }}
-              value={1}
-            />
-            <Label>Gossiping</Label>
-            <TagInput
-              ref={inputTagRef}
-              onClick={(event) => {
-                inputTagRef.current = event.target;
-              }}
-              value={2}
-            />
-            <Label>SchoolLife</Label>
-          </InputGroup>
-          <InputGroup>
-            <FormLabel>Content:</FormLabel>
-            <ContentInput ref={inputContentRef} onChange={() => {}} />
-          </InputGroup>
-          <InputGroup>
-            <FormLabel></FormLabel>
-            <SubmitBtn onClick={PostData}>Submit</SubmitBtn>
-          </InputGroup>
-        </Wrapper>
+        <Main>
+          <Wrapper>
+            <InputGroup>
+              <FormLabel>Title:</FormLabel>
+              <TitleInput ref={inputTitleRef} onChange={() => {}} />
+            </InputGroup>
+            <InputGroup>
+              <FormLabel>Tag:</FormLabel>
+              <TagInput
+                ref={inputTagRef}
+                onClick={(event) => {
+                  inputTagRef.current = event.target;
+                }}
+                value={0}
+              />
+              <Label>Beauty</Label>
+              <TagInput
+                ref={inputTagRef}
+                onClick={(event) => {
+                  inputTagRef.current = event.target;
+                }}
+                value={1}
+              />
+              <Label>Gossiping</Label>
+              <TagInput
+                ref={inputTagRef}
+                onClick={(event) => {
+                  inputTagRef.current = event.target;
+                }}
+                value={2}
+              />
+              <Label>SchoolLife</Label>
+            </InputGroup>
+            <InputGroup>
+              <FormLabel>Content:</FormLabel>
+              <ContentInput ref={inputContentRef} onChange={() => {}} />
+            </InputGroup>
+            <InputGroup>
+              <FormLabel></FormLabel>
+              <SubmitBtn onClick={PostData}>Submit</SubmitBtn>
+            </InputGroup>
+          </Wrapper>
+          <ArticleWrapper></ArticleWrapper>
+        </Main>
         <FriendListPanel>
           <FriendListTitle>好友列表</FriendListTitle>
           <FriendsList>
