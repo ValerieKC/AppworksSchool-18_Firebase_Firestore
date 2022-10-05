@@ -15,7 +15,7 @@ import {
 } from "firebase/firestore";
 import { useEffect, useRef, useState } from "react";
 import styled, { createGlobalStyle } from "styled-components";
-const authorId = "valerieKC";
+const authorId = "valerie";
 
 const firebaseConfig = {
   apiKey: "AIzaSyDJdAP5KZ8_JT2VOTMW-SfYZ5qdvBWEZXQ",
@@ -229,7 +229,11 @@ function MyFireStoreApp() {
     id: "valerie",
     name: "KCWang",
   };
-  const tag = [{ 0: "Beauty" }, { 1: "Gossipping" }, { 2: "SchoolLife" }];
+  const tag = [
+    {0: "Beauty"},
+    {1: "Gossiping"},
+    {2: "SchoolLife"}
+];
 
   async function PostData() {
     try {
@@ -280,14 +284,16 @@ function MyFireStoreApp() {
         doc(db, "Users", inputSearchRef.current.value.trim())
       );
       // console.log(getFriend.data());
-      setSearchUser(getFriend?.data() ? getFriend.data().name : "查無此用戶");
+      // setSearchUser(getFriend?.data() ? getFriend.data().name : "查無此用戶");
 
-      //       const result = tag.find((e) => {
-      //         console.log(e)
-      //         if(e.value === inputSearchRef.current.value.trim()){
-      // console.log(e.key)
-      //         }
-      //       });
+      const result = tag.find((e,index) => {
+        // console.log(typeof String(Object.values(e)));
+        if (inputSearchRef.current.value.trim() === String(Object.values(e))) {
+          return index
+        }
+      });
+
+      console.log(result[0])
 
       // const tagList = collection(db, "Articles");
       // const q = query(
